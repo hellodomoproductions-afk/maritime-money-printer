@@ -17,9 +17,9 @@ client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 def generate_short_script():
     prompt = f"""Create a short, engaging 25-30 second YouTube Shorts script about {NICHE}.
     - Strong hook
-    - 2-3 practical tips for shipyard workers in Puget Sound
+    - 2-3 practical tips for shipyard workers or maritime small business owners in Puget Sound
     - Clear CTA with affiliate placeholder
-    Keep spoken text under 70 words."""
+    Keep spoken text under 70 words. Conversational and useful."""
     
     response = client.chat.completions.create(
         model="grok-4.20-non-reasoning",
@@ -38,11 +38,10 @@ def create_video(script_text, video_id):
         tts = gTTS(script_text, lang='en')
         tts.save(audio_path)
         
-        # Simple video: colored background + audio (no text overlay for now to avoid syntax issues)
-        # We'll add text overlay later once stable
+        # Simple navy background + audio (no text overlay to avoid syntax issues)
         cmd = [
             "ffmpeg", "-y",
-            "-f", "lavfi", "-i", "color=c=0x001428:s=1080x1920:d=30",  # Navy background
+            "-f", "lavfi", "-i", "color=c=0x001428:s=1080x1920:d=30",
             "-i", audio_path,
             "-c:v", "libx264",
             "-c:a", "aac",
@@ -53,10 +52,10 @@ def create_video(script_text, video_id):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
             print(f"✅ Stable Short with sound generated: {final_path}")
-            print(f"📝 Script used: {script_text[:150]}...")
+            print(f"📝 Script: {script_text[:150]}...")
             return final_path
         else:
-            print(f"❌ FFmpeg error: {result.stderr[:200]}...")
+            print(f"❌ FFmpeg error: {result.stderr[:300]}...")
             return None
     except Exception as e:
         print(f"❌ Video creation error: {e}")
@@ -68,7 +67,7 @@ def ai_watchdog():
     print("📝 Script:", script)
     video_path = create_video(script, f"short_{int(time.time())}")
     if video_path:
-        print("🎉 New Short ready!")
+        print("🎉 New Short ready! AI will generate more every 12 hours.")
 
 # Scheduler
 scheduler = BackgroundScheduler()
