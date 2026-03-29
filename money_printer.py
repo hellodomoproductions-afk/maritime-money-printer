@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # ====================== CONFIG ======================
-GROK_API_KEY = "xai-dxyVomgsgpDKD3rKEcBi1nAYhQVD1wnjEz1e9hisrWtqPi4sAUf1s9Gz4WcLQ0WRuCkyNPjKUeqVht3u"   # ←←← YOUR FULL KEY HERE (one line!)
+GROK_API_KEY = "GROK_API_KEY = os.getenv("GROK_API_KEY")"   # ←←← YOUR FULL KEY HERE (one line!)
 NICHE = "naval maritime small business compliance life hacks puget sound shipyard"
 OUTPUT_DIR = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
