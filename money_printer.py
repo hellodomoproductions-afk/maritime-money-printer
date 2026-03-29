@@ -76,7 +76,7 @@ scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
 print("🚀 Maritime Money Printer started with AI watchdog!")
-ai_watchdog()  # Force one generation right now
+ai_watchdog()  # Force one generation right now   <--- This line must be here and NOT commented
 
 try:
     while True:
