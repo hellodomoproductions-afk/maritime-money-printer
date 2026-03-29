@@ -36,7 +36,7 @@ def create_video(script_text, video_id):
 
     text_img = Image.new('RGB', (width, height), bg_color)
     draw = ImageDraw.Draw(text_img)
-    font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 58)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 58)
     words = script_text.split()
     lines = []
     current_line = []
