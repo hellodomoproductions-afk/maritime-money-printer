@@ -38,12 +38,14 @@ def create_video(script_text, video_id):
         tts = gTTS(script_text, lang='en')
         tts.save(audio_path)
         
-        # Create video with ffmpeg drawtext (low memory)
+        # Simple ffmpeg command with drawtext (low memory)
+        escaped_text = script_text.replace("'", "'\\''").replace(":", "\\:")
+        
         cmd = [
             "ffmpeg", "-y",
             "-f", "lavfi", "-i", "color=c=0x001428:s=1080x1920:d=30",
             "-i", audio_path,
-            "-vf", f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=48:fontcolor=white:borderw=5:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2:text='{script_text.replace(':', '\\:').replace(\"'\", \"'\\''\")}'",
+            "-vf", f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=48:fontcolor=white:borderw=5:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2:text='{escaped_text}'",
             "-c:v", "libx264",
             "-c:a", "aac",
             "-shortest",
@@ -55,7 +57,7 @@ def create_video(script_text, video_id):
             print(f"✅ Stable Short with sound generated: {final_path}")
             return final_path
         else:
-            print(f"❌ FFmpeg error: {result.stderr[:500]}...")
+            print(f"❌ FFmpeg error: {result.stderr[:300]}...")
             return None
     except Exception as e:
         print(f"❌ Video creation error: {e}")
@@ -69,15 +71,15 @@ def ai_watchdog():
     if video_path:
         print("🎉 New Short ready! The AI will keep generating more every 12 hours.")
 
-# Scheduler setup
+# Scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
 print("🚀 Maritime Money Printer started with AI watchdog!")
-ai_watchdog()  # Generate one immediately on start
+ai_watchdog()  # Generate one immediately
 
-# Keep the process alive
+# Keep alive
 try:
     while True:
         time.sleep(3600)
