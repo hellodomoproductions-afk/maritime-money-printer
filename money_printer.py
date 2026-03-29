@@ -6,7 +6,6 @@ from gtts import gTTS
 import subprocess
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# ====================== CONFIG ======================
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 NICHE = "naval maritime small business compliance life hacks puget sound shipyard"
 OUTPUT_DIR = "output"
@@ -15,13 +14,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 def generate_short_script():
-    print("🤖 Calling Grok API to generate script...")
-    prompt = f"""Create a short, engaging 25-30 second YouTube Shorts script about {NICHE}.
-    - Strong hook
-    - 2-3 practical tips for shipyard workers or maritime small business owners in Puget Sound
-    - Clear CTA with affiliate placeholder
-    Keep spoken text under 70 words."""
-    
+    print(f"[{datetime.now()}] 🤖 Calling Grok to generate script...")
+    prompt = f"Create a 25-30 second YouTube Shorts script about {NICHE}. Strong hook, 2-3 tips for shipyard workers in Puget Sound, clear CTA. Under 70 words."
     response = client.chat.completions.create(
         model="grok-4.20-non-reasoning",
         messages=[{"role": "user", "content": prompt}],
@@ -29,11 +23,11 @@ def generate_short_script():
         max_tokens=250
     )
     script = response.choices[0].message.content.strip()
-    print("✅ Script generated successfully")
+    print(f"✅ Script ready: {script[:150]}...")
     return script
 
 def create_video(script_text, video_id):
-    print("🎥 Creating video with audio...")
+    print(f"[{datetime.now()}] 🎥 Creating video...")
     try:
         audio_path = f"{OUTPUT_DIR}/{video_id}.mp3"
         final_path = f"{OUTPUT_DIR}/{video_id}.mp4"
@@ -51,35 +45,28 @@ def create_video(script_text, video_id):
             final_path
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"✅ Stable Short with sound generated: {final_path}")
-            return final_path
-        else:
-            print(f"❌ FFmpeg failed: {result.stderr[:200]}...")
-            return None
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"✅ Stable Short with sound generated: {final_path}")
+        return final_path
     except Exception as e:
         print(f"❌ Video error: {e}")
         return None
 
 def ai_watchdog():
-    print(f"\n[{datetime.now()}] 🚀 Starting new Short generation cycle...")
+    print(f"\n[{datetime.now()}] 🚀 Generating new maritime Short...")
     script = generate_short_script()
-    print("📝 Script:", script)
-    video_path = create_video(script, f"short_{int(time.time())}")
-    if video_path:
-        print("🎉 Short ready! Next one in 12 hours.\n")
+    create_video(script, f"short_{int(time.time())}")
 
-# Scheduler + immediate generation
+# Run immediately and schedule
 scheduler = BackgroundScheduler()
 scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
-print("🚀 Maritime Money Printer started with AI watchdog!")
-ai_watchdog()  # Force one generation right now   <--- This line must be here and NOT commented
+print("🚀 Maritime Money Printer started!")
+ai_watchdog()   # <--- This forces generation right now
 
 try:
     while True:
         time.sleep(3600)
-except KeyboardInterrupt:
+except:
     scheduler.shutdown()
