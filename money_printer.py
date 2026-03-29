@@ -4,8 +4,6 @@ from datetime import datetime
 from openai import OpenAI
 from gtts import gTTS
 import subprocess
-from PIL import Image, ImageDraw, ImageFont
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # ====================== CONFIG ======================
 GROK_API_KEY = os.getenv("GROK_API_KEY")
@@ -16,80 +14,50 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 def generate_short_script():
-    prompt = f"""Write a engaging 30-second YouTube Shorts script for this niche: {NICHE}.
-    Structure:
-    - Strong hook (first 3-5 seconds)
-    - 2-3 useful tips or life hacks
-    - Strong CTA with affiliate placeholder
-    Keep total spoken text under 75 words. Make it conversational and valuable for shipyard workers/vets in Puget Sound area."""
+    prompt = f"""Create a short, engaging 25-30 second YouTube Shorts script about {NICHE}.
+    - Start with a strong hook
+    - Give 2-3 practical tips for shipyard workers or maritime small business owners in Puget Sound
+    - End with a clear CTA and affiliate placeholder
+    Keep the entire spoken text under 70 words. Make it conversational and useful."""
     
     response = client.chat.completions.create(
-        model="grok-4.20-non-reasoning",  # or whatever current model works
+        model="grok-4.20-non-reasoning",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
-        max_tokens=300
+        max_tokens=250
     )
     return response.choices[0].message.content.strip()
 
 def create_video(script_text, video_id):
     try:
-        # Simple background
-        width, height = 1080, 1920
-        bg_color = (0, 20, 40)  # Navy blue
-        
-        # Create text image with PIL (lower memory)
-        text_img = Image.new('RGB', (width, height), bg_color)
-        draw = ImageDraw.Draw(text_img)
-        
-        # Use available Linux font with smaller size and wrapping
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 50)
-        except:
-            font = ImageFont.load_default()
-        
-        # Simple word wrap
-        lines = []
-        words = script_text.split()
-        current_line = []
-        for word in words:
-            current_line.append(word)
-            if len(" ".join(current_line)) > 40:  # rough wrap
-                lines.append(" ".join(current_line[:-1]))
-                current_line = [word]
-        if current_line:
-            lines.append(" ".join(current_line))
-        
-        y = 300
-        for line in lines:
-            draw.text((100, y), line, font=font, fill=(255, 255, 255))
-            y += 80
-        
-        # Save text frame
-        text_path = f"{OUTPUT_DIR}/{video_id}_text.png"
-        text_img.save(text_path)
-        
-        # TTS audio
-        tts = gTTS(script_text, lang='en')
         audio_path = f"{OUTPUT_DIR}/{video_id}.mp3"
+        final_path = f"{OUTPUT_DIR}/{video_id}.mp4"
+        
+        # Generate audio
+        tts = gTTS(script_text, lang='en')
         tts.save(audio_path)
         
-        # Create simple video with ffmpeg (much lower memory)
-        final_path = f"{OUTPUT_DIR}/{video_id}.mp4"
+        # Create simple video with ffmpeg (very low memory)
+        # Black background with white text overlay + gentle zoom
         cmd = [
             "ffmpeg", "-y",
-            "-loop", "1", "-i", text_path,
+            "-f", "lavfi", "-i", "color=c=0x001428:s=1080x1920:d=30",  # Navy background, 30 seconds
             "-i", audio_path,
-            "-c:v", "libx264", "-tune", "stillimage",
+            "-vf", "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=50:fontcolor=white:borderw=4:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2:text='" + script_text.replace("'", "'\\''") + "':enable='between(t,0,30)'",
+            "-c:v", "libx264",
             "-c:a", "aac",
             "-shortest",
-            "-vf", "scale=1080:1920",
             final_path
         ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         
-        print(f"✅ Stable Short with sound generated: {final_path}")
-        return final_path
-        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✅ Stable Short with sound generated: {final_path}")
+            return final_path
+        else:
+            print(f"❌ FFmpeg error: {result.stderr}")
+            return None
+            
     except Exception as e:
         print(f"❌ Video creation error: {e}")
         return None
@@ -97,20 +65,19 @@ def create_video(script_text, video_id):
 def ai_watchdog():
     print(f"[{datetime.now()}] 🚀 Generating new maritime Short...")
     script = generate_short_script()
-    print("📝 Generated script:", script[:200] + "..." if len(script) > 200 else script)
+    print("📝 Script:", script)
     create_video(script, f"short_{int(time.time())}")
 
-# Scheduler (runs every 12 hours)
+# Scheduler + immediate run
 scheduler = BackgroundScheduler()
 scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
-print("🚀 Maritime Money Printer started with AI watchdog!")
-ai_watchdog()  # Generate one immediately
+print("🚀 Maritime Money Printer (ultra-light) started!")
+ai_watchdog()  # Generate one right away
 
-# Keep running
 try:
     while True:
         time.sleep(3600)
-except KeyboardInterrupt:
+except:
     scheduler.shutdown()
