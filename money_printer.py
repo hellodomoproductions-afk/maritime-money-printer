@@ -15,11 +15,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 def generate_short_script():
+    print("🤖 Calling Grok API to generate script...")
     prompt = f"""Create a short, engaging 25-30 second YouTube Shorts script about {NICHE}.
     - Strong hook
     - 2-3 practical tips for shipyard workers or maritime small business owners in Puget Sound
     - Clear CTA with affiliate placeholder
-    Keep spoken text under 70 words. Conversational and useful."""
+    Keep spoken text under 70 words."""
     
     response = client.chat.completions.create(
         model="grok-4.20-non-reasoning",
@@ -27,18 +28,19 @@ def generate_short_script():
         temperature=0.7,
         max_tokens=250
     )
-    return response.choices[0].message.content.strip()
+    script = response.choices[0].message.content.strip()
+    print("✅ Script generated successfully")
+    return script
 
 def create_video(script_text, video_id):
+    print("🎥 Creating video with audio...")
     try:
         audio_path = f"{OUTPUT_DIR}/{video_id}.mp3"
         final_path = f"{OUTPUT_DIR}/{video_id}.mp4"
         
-        # Generate audio
         tts = gTTS(script_text, lang='en')
         tts.save(audio_path)
         
-        # Simple navy background + audio (no text overlay to avoid syntax issues)
         cmd = [
             "ffmpeg", "-y",
             "-f", "lavfi", "-i", "color=c=0x001428:s=1080x1920:d=30",
@@ -52,30 +54,29 @@ def create_video(script_text, video_id):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
             print(f"✅ Stable Short with sound generated: {final_path}")
-            print(f"📝 Script: {script_text[:150]}...")
             return final_path
         else:
-            print(f"❌ FFmpeg error: {result.stderr[:300]}...")
+            print(f"❌ FFmpeg failed: {result.stderr[:200]}...")
             return None
     except Exception as e:
-        print(f"❌ Video creation error: {e}")
+        print(f"❌ Video error: {e}")
         return None
 
 def ai_watchdog():
-    print(f"[{datetime.now()}] 🚀 Generating new maritime Short...")
+    print(f"\n[{datetime.now()}] 🚀 Starting new Short generation cycle...")
     script = generate_short_script()
     print("📝 Script:", script)
     video_path = create_video(script, f"short_{int(time.time())}")
     if video_path:
-        print("🎉 New Short ready! AI will generate more every 12 hours.")
+        print("🎉 Short ready! Next one in 12 hours.\n")
 
-# Scheduler
+# Scheduler + immediate generation
 scheduler = BackgroundScheduler()
 scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
-print("🚀 Maritime Money Printer started!")
-ai_watchdog()  # Generate one immediately
+print("🚀 Maritime Money Printer started with AI watchdog!")
+ai_watchdog()  # Force one generation right now
 
 try:
     while True:
