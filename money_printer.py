@@ -16,7 +16,7 @@ client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 def ai_watchdog():
     print(f"\n[{datetime.now()}] 🚀 Generating new maritime Short...")
     try:
-        prompt = f"Create a short engaging YouTube Shorts script about {NICHE}. Strong hook, 2-3 tips for shipyard workers in Puget Sound, clear CTA. Under 70 words."
+        prompt = f"Create a short engaging YouTube Shorts script about {NICHE}. Strong hook, 2-3 tips for shipyard workers in Puget Sound, clear CTA with affiliate link placeholder. Under 70 words."
         response = client.chat.completions.create(
             model="grok-4.20-non-reasoning",
             messages=[{"role": "user", "content": prompt}],
@@ -45,13 +45,13 @@ def ai_watchdog():
     except Exception as e:
         print(f"❌ Error: {e}")
 
-# Run immediately and schedule
+# Force generation on startup and schedule every 12 hours
 scheduler = BackgroundScheduler()
 scheduler.add_job(ai_watchdog, 'interval', hours=12)
 scheduler.start()
 
 print("🚀 Maritime Money Printer started!")
-ai_watchdog()  # Force generation now
+ai_watchdog()  # Force one now
 
 try:
     while True:
